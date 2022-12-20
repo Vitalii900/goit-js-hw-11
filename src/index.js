@@ -1,11 +1,13 @@
 import getPhotoFromServer from './getPhotoFromServer';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
 
 const formRef = document.querySelector('#search-form');
 const galleryRef = document.querySelector('.gallery');
-const loadMoreButtonRaf = document.querySelector('.load-more');
+const loadMoreButtonRef = document.querySelector('.load-more');
 
 formRef.addEventListener('submit', searchPhoto);
-loadMoreButtonRaf.addEventListener('click', loadMore);
+loadMoreButtonRef.addEventListener('click', loadMore);
+loadMoreButtonRef.classList.add('visually-hidden');
 
 let pageCounter = 1;
 let inputValue = '';
@@ -13,17 +15,33 @@ let inputValue = '';
 async function searchPhoto(event) {
   event.preventDefault();
   pageCounter = 1;
-  inputValue = event.target.elements.searchQuery.value;
-  const array = await getPhotoFromServer(inputValue, pageCounter);
-  addMurkupOnPage(array);
   
+  inputValue = event.target.elements.searchQuery.value;
+  const {hits} = await getPhotoFromServer(inputValue, pageCounter);
+  galleryRef.innerHTML = '';
+  if (hits.length === 0) {
+    loadMoreButtonRef.classList.add('visually-hidden');
+    Notify.failure(
+      'Sorry, there are no images matching your search query. Please try again.'
+    );
+    return;
+  }
+  addMurkupOnPage(hits);
+  loadMoreButtonRef.classList.remove('visually-hidden');
 }
 
 async function loadMore() {
   pageCounter += 1;
-  const array = await getPhotoFromServer(inputValue, pageCounter);
-  addMurkupOnPage(array);
-  // console.log(array);
+  const { hits } = await getPhotoFromServer(inputValue, pageCounter);
+  if (hits.length < 40) {
+    Notify.failure(
+      'We are sorry, but you have reached the end of search results'
+    );
+    loadMoreButtonRef.classList.add('visually-hidden');
+    return;
+  }
+  addMurkupOnPage(hits);
+  // console.log(hits);
 }
 
 function addMurkupOnPage(arrayOfObjects) {
